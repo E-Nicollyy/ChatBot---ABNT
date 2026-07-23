@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Assistente Acadêmico</title>
+<style>
+  :root {
+    --papel: #f6f3ec;
+    --tinta: #241f18;
+    --tinta-suave: #5b5347;
+    --linha: #d8d0bf;
+    --selo: #8a3324;
+    --selo-suave: #f1e3dd;
+    --ok: #2f5233;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--papel);
+    color: var(--tinta);
+    font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    line-height: 1.5;
+  }
+
+  header.topo {
+    border-bottom: 2px solid var(--tinta);
+    padding: 28px 32px 18px;
+  }
+
+  header.topo h1 {
+    margin: 0;
+    font-size: 1.9rem;
+    letter-spacing: 0.02em;
+    font-weight: 600;
+  }
+
+  header.topo p {
+    margin: 6px 0 0;
+    color: var(--tinta-suave);
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.92rem;
+  }
+
+  .layout {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 24px 32px 64px;
+  }
+
+  nav.abas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    border-bottom: 1px solid var(--linha);
+    margin-bottom: 28px;
+  }
+
+  nav.abas button {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    background: none;
+    border: none;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--tinta-suave);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+
+  nav.abas button.ativa {
+    color: var(--selo);
+    border-bottom-color: var(--selo);
+  }
+
+  section.painel { display: none; }
+  section.painel.ativa { display: block; }
+
+  .grade {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+
+  @media (max-width: 760px) {
+    .grade { grid-template-columns: 1fr; }
+  }
+
+  .campo { margin-bottom: 14px; }
+
+  .campo label {
+    display: block;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--tinta-suave);
+    margin-bottom: 4px;
+  }
+
+  .campo input[type="text"],
+  .campo textarea,
+  .campo input[type="file"] {
+    width: 100%;
+    padding: 9px 10px;
+    font-family: inherit;
+    font-size: 0.98rem;
+    background: #fff;
+    border: 1px solid var(--linha);
+    border-radius: 2px;
+    color: var(--tinta);
+  }
+
+  .campo textarea { resize: vertical; }
+
+  h3.titulo-secao {
+    font-size: 1.05rem;
+    margin: 0 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--linha);
+  }
+
+  .botao {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    background: var(--selo);
+    color: #fff;
+    border: none;
+    padding: 11px 22px;
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+
+  .botao:disabled { background: #b9ab9d; cursor: progress; }
+
+  .resultado {
+    border: 1px solid var(--linha);
+    background: #fffdf8;
+    padding: 16px;
+    min-height: 220px;
+    white-space: pre-wrap;
+    font-size: 0.95rem;
+  }
+
+  .download {
+    display: none;
+    margin-top: 14px;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.9rem;
+  }
+
+  .download a {
+    color: var(--ok);
+    font-weight: 600;
+    text-decoration: none;
+    border-bottom: 1px solid var(--ok);
+  }
+
+  .aviso {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.85rem;
+    background: var(--selo-suave);
+    border-left: 3px solid var(--selo);
+    padding: 8px 12px;
+    margin-bottom: 16px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <h1>Assistente Acadêmico</h1>
+  <p>Geração e correção de trabalhos acadêmicos com formatação ABNT — TCC, artigo, relatório e trabalho.</p>
+</header>
+
+<div class="layout">
+
+  <nav class="abas" id="abas"></nav>
+
+  <div id="paineis"></div>
+
+</div>
+
+<script>
+  const TIPOS_ACADEMICOS = ["TCC", "Artigo Científico", "Relatório de Estágio", "Trabalho Acadêmico"];
+
+  const abasEl = document.getElementById("abas");
+  const paineisEl = document.getElementById("paineis");
+
+  function criarFormularioAcademico(tipo) {
+    const slug = tipo.replace(/\s+/g, "-").toLowerCase();
+    const painel = document.createElement("section");
+    painel.className = "painel";
+    painel.dataset.slug = slug;
+
+    painel.innerHTML = `
+      <h3 class="titulo-secao">Criar ${tipo}</h3>
+      <div class="grade">
+        <div>
+          <div class="campo">
+            <label>Orientações / Tema / Instruções</label>
+            <textarea rows="5" data-campo="prompt"></textarea>
+          </div>
+          <div class="campo">
+            <label>Anexar material de apoio (opcional — .txt, .docx, .pdf)</label>
+            <input type="file" data-campo="arquivo" accept=".txt,.docx,.pdf" />
+          </div>
+
+          <h3 class="titulo-secao" style="margin-top:22px;">Dados para capa e folha de rosto (ABNT)</h3>
+          <div class="campo"><label>Seu nome completo</label><input type="text" data-campo="nomeAluno" /></div>
+          <div class="campo"><label>Instituição</label><input type="text" data-campo="instituicao" /></div>
+          <div class="campo"><label>Curso / Disciplina</label><input type="text" data-campo="curso" /></div>
+          <div class="campo"><label>Orientador(a) (opcional)</label><input type="text" data-campo="orientador" /></div>
+          <div class="campo"><label>Cidade</label><input type="text" data-campo="cidade" /></div>
+
+          <button class="botao" data-acao="gerar">Gerar ${tipo}</button>
+        </div>
+
+        <div>
+          <div class="aviso" data-el="aviso"></div>
+          <label style="font-family: 'Helvetica Neue', Arial, sans-serif; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--tinta-suave); display:block; margin-bottom:4px;">Resultado da IA</label>
+          <div class="resultado" data-el="resultado">Aguardando geração...</div>
+          <div class="download" data-el="download">📄 <a href="#" target="_blank" rel="noopener">Baixar documento Word (.docx)</a></div>
+        </div>
+      </div>
+    `;
+
+    const botao = painel.querySelector('[data-acao="gerar"]');
+    botao.addEventListener("click", async () => {
+      const campo = (nome) => painel.querySelector(`[data-campo="${nome}"]`).value;
+      const arquivoInput = painel.querySelector('[data-campo="arquivo"]');
+      const avisoEl = painel.querySelector('[data-el="aviso"]');
+      const resultadoEl = painel.querySelector('[data-el="resultado"]');
+      const downloadEl = painel.querySelector('[data-el="download"]');
+
+      avisoEl.style.display = "none";
+      downloadEl.style.display = "none";
+      resultadoEl.textContent = "Gerando, aguarde...";
+      botao.disabled = true;
+
+      try {
+        const formData = new FormData();
+        formData.append("tipoDoc", tipo);
+        formData.append("prompt", campo("prompt"));
+        formData.append("nomeAluno", campo("nomeAluno"));
+        formData.append("instituicao", campo("instituicao"));
+        formData.append("curso", campo("curso"));
+        formData.append("orientador", campo("orientador"));
+        formData.append("cidade", campo("cidade"));
+        if (arquivoInput.files[0]) formData.append("arquivo", arquivoInput.files[0]);
+
+        const resp = await fetch("/api/academico", { method: "POST", body: formData });
+        const dados = await resp.json();
+
+        if (!resp.ok) {
+          avisoEl.textContent = dados.erro || "Ocorreu um erro.";
+          avisoEl.style.display = "block";
+          resultadoEl.textContent = "";
+          return;
+        }
+
+        resultadoEl.textContent = dados.resposta || "(sem texto adicional)";
+        if (dados.downloadUrl) {
+          const link = downloadEl.querySelector("a");
+          link.href = dados.downloadUrl;
+          link.textContent = `Baixar ${dados.nomeArquivo}`;
+          downloadEl.style.display = "block";
+        }
+      } catch (e) {
+        avisoEl.textContent = "Falha na requisição: " + e.message;
+        avisoEl.style.display = "block";
+      } finally {
+        botao.disabled = false;
+      }
+    });
+
+    return painel;
+  }
+
+  function criarPainelCorrecao() {
+    const painel = document.createElement("section");
+    painel.className = "painel";
+    painel.dataset.slug = "correção";
+
+    painel.innerHTML = `
+      <h3 class="titulo-secao">Área de correção automatizada</h3>
+      <p style="font-family:'Helvetica Neue', Arial, sans-serif; font-size:0.88rem; color:var(--tinta-suave); margin-top:-8px;">
+        Envie um texto ou um arquivo (trabalho ou lista de exercícios). A IA identifica o tipo de conteúdo e aplica as correções automaticamente.
+      </p>
+      <div class="grade">
+        <div>
+          <div class="campo">
+            <label>Texto para correção (opcional se enviar arquivo)</label>
+            <textarea rows="8" data-campo="prompt"></textarea>
+          </div>
+          <div class="campo">
+            <label>Enviar arquivo (.txt, .docx, .pdf)</label>
+            <input type="file" data-campo="arquivo" accept=".txt,.docx,.pdf" />
+          </div>
+          <button class="botao" data-acao="corrigir">Iniciar correção</button>
+        </div>
+        <div>
+          <div class="aviso" data-el="aviso"></div>
+          <label style="font-family: 'Helvetica Neue', Arial, sans-serif; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--tinta-suave); display:block; margin-bottom:4px;">Análise e sugestões da IA</label>
+          <div class="resultado" data-el="resultado">Aguardando correção...</div>
+          <div class="download" data-el="download">📄 <a href="#" target="_blank" rel="noopener">Baixar documento corrigido (.docx)</a></div>
+        </div>
+      </div>
+    `;
+
+    const botao = painel.querySelector('[data-acao="corrigir"]');
+    botao.addEventListener("click", async () => {
+      const prompt = painel.querySelector('[data-campo="prompt"]').value;
+      const arquivoInput = painel.querySelector('[data-campo="arquivo"]');
+      const avisoEl = painel.querySelector('[data-el="aviso"]');
+      const resultadoEl = painel.querySelector('[data-el="resultado"]');
+      const downloadEl = painel.querySelector('[data-el="download"]');
+
+      avisoEl.style.display = "none";
+      downloadEl.style.display = "none";
+      resultadoEl.textContent = "Corrigindo, aguarde...";
+      botao.disabled = true;
+
+      try {
+        const formData = new FormData();
+        formData.append("prompt", prompt);
+        if (arquivoInput.files[0]) formData.append("arquivo", arquivoInput.files[0]);
+
+        const resp = await fetch("/api/correcao", { method: "POST", body: formData });
+        const dados = await resp.json();
+
+        if (!resp.ok) {
+          avisoEl.textContent = dados.erro || "Ocorreu um erro.";
+          avisoEl.style.display = "block";
+          resultadoEl.textContent = "";
+          return;
+        }
+
+        resultadoEl.textContent = dados.resposta || "(sem sugestões adicionais)";
+        if (dados.downloadUrl) {
+          const link = downloadEl.querySelector("a");
+          link.href = dados.downloadUrl;
+          link.textContent = `Baixar ${dados.nomeArquivo}`;
+          downloadEl.style.display = "block";
+        }
+      } catch (e) {
+        avisoEl.textContent = "Falha na requisição: " + e.message;
+        avisoEl.style.display = "block";
+      } finally {
+        botao.disabled = false;
+      }
+    });
+
+    return painel;
+  }
+
+  function montarAbas() {
+    const todasAsAbas = [...TIPOS_ACADEMICOS, "Correção"];
+
+    todasAsAbas.forEach((nome, indice) => {
+      const slug = nome.replace(/\s+/g, "-").toLowerCase();
+
+      const btn = document.createElement("button");
+      btn.textContent = nome;
+      btn.dataset.slug = slug;
+      if (indice === 0) btn.classList.add("ativa");
+      btn.addEventListener("click", () => ativarAba(slug));
+      abasEl.appendChild(btn);
+
+      const painel = nome === "Correção" ? criarPainelCorrecao() : criarFormularioAcademico(nome);
+      if (indice === 0) painel.classList.add("ativa");
+      paineisEl.appendChild(painel);
+    });
+  }
+
+  function ativarAba(slug) {
+    document.querySelectorAll("nav.abas button").forEach((b) => b.classList.toggle("ativa", b.dataset.slug === slug));
+    document.querySelectorAll("section.painel").forEach((p) => p.classList.toggle("ativa", p.dataset.slug === slug));
+  }
+
+  montarAbas();
+</script>
+
+</body>
+</html>
